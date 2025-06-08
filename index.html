@@ -137,16 +137,6 @@
       font-weight: bold;
     }
       
-      @keyframes cellClickAnimation {
-  0% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1) rotate(2deg);
-  }
-  100% {
-    transform: scale(1);
-  }
 }
 
 .cell.animate {
@@ -384,22 +374,22 @@
   points: 200,
   question: {
     type: "audio",
-    content: "https://www.dropbox.com/scl/fi/1r3vkkoydm9xv3wiuxq3p/cyberpunk_2077_05-P.T.-Adamczyk-Outsider-No-More.mp3?rlkey=w80t8846topihlgkidpscpofo&st=hcoo9lg0&raw=1"
+    content: "https://www.dropbox.com/scl/fi/wendq6x9ehofmsgcyxftq/.mp3?rlkey=62qp78de9ov1jtj39v04e6t4y&st=gwuog8xk&raw=1"
   },
   answer: {
     type: "text",
-    content: "cyberpunk 2077 - Outsider No More"
+    content: "Гарри Поттер и Дары Смерти"
   }
 },
     {
   points: 300,
   question: {
-    type: "text",
-    content: "«Лишь качество чьих-либо убеждений определяет успех, а не число последователей.»"
+    type: "audio",
+    content: "https://www.dropbox.com/scl/fi/flwsr4m9ewsp7p08se82g/The_Witcher_3_Wild_Hunt_OST_-_Unreleased_Bloody_Baron_Theme_Extended_-SkySound.cc.mp3?rlkey=pu60aj2zwad0kdag3oja95hgk&st=jb8g7jtz&raw=1"
   },
   answer: {
-    type: "video",
-    content: "https://www.youtube.com/embed/qvCGzL9e82Y"
+    type: "text",
+    content: "the witcher 3 wild hunt - Bloody Baron Theme"
   }
 },
     {
@@ -576,14 +566,6 @@ function updateTimerDisplay(seconds) {
 
 cell.addEventListener('click', () => {
 if (cell.classList.contains('used')) return;
-
-// 👉 Добавим класс для анимации
-  cell.classList.add("animate");
-
-  // 👉 Удалим класс после завершения анимации (0.4с = как в CSS)
-  setTimeout(() => {
-    cell.classList.remove("animate");
-  }, 400);
 
 if (questionObj) {
   questionText.innerHTML = questionObj.question.content;
