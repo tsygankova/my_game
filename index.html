@@ -1,0 +1,682 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <title>Своя Игра</title>
+
+  <style>
+    /* === Общие стили для body и html === */
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      background: radial-gradient(circle, rgb(51, 91, 181) 0%, rgb(43, 70, 143) 100%);
+      font-family: 'Tahoma', sans-serif;
+      color: white;
+    }
+
+    /* === Стартовый экран (заставка) === */
+    #splashScreen {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      cursor: pointer;
+    }
+
+    #splashScreen img {
+      max-width: 70vw;
+      max-height: 70vh;
+      transition: transform 0.3s ease;
+    }
+
+    #splashScreen img:hover {
+      transform: scale(1.05);
+    }
+
+    /* === Основной контейнер игры === */
+    #gameContainer {
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* === Игровое поле (сетка) === */
+    #gameBoard {
+      display: grid;
+      width: 100%;
+      height: 100%;
+      grid-template-columns: 500px repeat(5, 1fr); /* Категория + 5 вопросов */
+      grid-template-rows: repeat(5, 1fr);          /* 5 строк */
+      border: 2px solid white;
+    }
+
+    /* === Ячейки сетки === */
+    .cell {
+      background: radial-gradient(circle, rgb(51, 91, 181) 0%, rgb(43, 70, 143) 100%);
+      border: 1px solid white;
+      font-size: 36px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      user-select: none;
+      cursor: pointer;
+      transition: background-color 0.3s, transform 0.6s ease; /* ← это запускает анимацию */
+      transform-style: preserve-3d;
+    }
+
+    .cell:hover {
+      transform: scale(1.02);
+    }
+
+    .cell.used {
+      color: transparent;
+      cursor: default;
+      pointer-events: none;
+    }
+
+    .category {
+      cursor: default;
+    }
+
+    /* === Модальное окно с вопросом === */
+    #questionModal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: radial-gradient(circle, rgb(51, 91, 181) 0%, rgb(43, 70, 143) 100%);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      z-index: 100;
+      text-align: center;
+      position: relative;
+    }
+
+    #questionContent {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      max-width: 90vw;
+      padding: 40px;
+    }
+
+    .questionText {
+      font-size: 3vw;
+      margin-bottom: 40px;
+    }
+
+    #showAnswerBtn, #backBtn {
+      padding: 15px 30px;
+      font-size: 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      background-color: white;
+      color: black;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    #showAnswerBtn:hover, #backBtn:hover {
+      background-color: #ddd;
+    }
+
+    /* Таймер */
+    #timer {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 50px;
+      font-weight: bold;
+    }
+      
+      @keyframes cellClickAnimation {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1) rotate(2deg);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.cell.animate {
+  animation: cellClickAnimation 0.4s ease;
+}
+
+  </style>
+</head>
+<body>
+
+  <!-- === Стартовый экран === -->
+  <div id="splashScreen">
+    <img src="https://i.ibb.co/kVWDFLf9/logo3.png" alt="svoya-igra" />
+  </div>
+
+  <!-- === Основной контейнер с игровым полем === -->
+  <div id="gameContainer">
+    <div id="gameBoard"></div>
+  </div>
+
+  <!-- === Модальное окно с вопросом и ответом === -->
+  <div id="questionModal" style="display: none;">
+    <div id="questionContent">
+      <div id="questionText" class="questionText">Тут будет вопрос</div>
+      <button id="showAnswerBtn">ПОКАЗАТЬ ОТВЕТ</button>
+      <div id="answerText" class="questionText" style="display: none;">Тут будет ответ</div>
+      <button id="backBtn" style="display: none;">К ВОПРОСАМ</button>
+      <div id="timer"></div>
+    </div>
+  </div>
+    
+<script>
+  const categories = [
+    {
+  name: "ПРАХ, НА КОТОРОМ ПОСТРОЕН МИР",
+  questions: [
+    {
+      points: 100,
+      question: {
+        type: "text+image",
+        content: "Они не совсем люди и не совсем чудовища. Их обучают с детства, и выживают не все.",
+        image: "https://i.ibb.co/Tqv9GZYz/0e76fa51862e2b5cacfb2d84f6be1b7e.jpg"
+      },
+      answer: {
+        type: "text",
+        content: "Ведьмаки"
+      }
+    },
+    {
+      points: 200,
+      question: {
+        type: "text+image",
+        content: "Он умер в 2023-м, но всё ещё спорит с тобой в голове. Кто он?",
+        image: "https://i.ibb.co/pjWJkSLC/77702046.jpg"
+      },
+      answer: {
+        type: "text",
+        content: "Джонни Сильверхенд"
+      }
+    },
+    {
+      points: 300,
+      question: {
+        type: "text+image",
+        content: "Это одна из фракций, которая управляет армией нежити.",
+        image: "https://i.ibb.co/nsHH59bZ/images-1.jpg"
+      },
+      answer: {
+        type: "text",
+        content: "Некрополис"
+      }
+    },
+    {
+      points: 400,
+      question: {
+        type: "text+image",
+        content: "Магическая клятва, нарушение которой приводит к неминуемой смерти нарушителя. Как называется эта клятва?",
+        image: "https://i.ibb.co/LzpVkzRf/1683814051.jpg"
+      },
+      answer: {
+        type: "text",
+        content: "Непреложный обет"
+      }
+    },
+    {
+      points: 500,
+      question: {
+        type: "text+image",
+        content: "В опасном мире один из самых ценных ресурсов — крошечные сферы, способные усиливать и улучшать вещи, но с ограниченным запасом. Как называется этот ресурс?",
+        image: "https://i.ibb.co/Fkd6fS3z/1.png"
+      },
+      answer: {
+        type: "text",
+        content: "Алмазная сфера (Exalted Orb)"
+      }
+    }
+  ]
+},
+    {
+  name: "ИСКУССТВО РАЗРУШАТЬ И ЗАЩИЩАТЬ",
+  questions: [
+    {
+      points: 100,
+      question: {
+        type: "text",
+        content: "Некоторые защитные конструкции в разных мирах срабатывают мгновенно: они блокируют урон, иногда рассеиваются после одного удара, а в редких случаях — взрываются, нанося урон окружающим. Один из таких барьеров, создаваемый не через слова, а через жест, легко спутать с другим, более известным щитом."
+      },
+      answer: {
+        type: "text",
+        content: "Квен"
+      }
+    },
+    {
+      points: 200,
+      question: {
+        type: "text",
+        content: "В мире, где тело — лишь оболочка для множества возможностей, существует модификация, позволяющая бесшумно и быстро наносить удары, словно незримый хищник. Эта технология ценится за неожиданность и смертельную точность, оставляя противника без шанса на защиту."
+      },
+      answer: {
+        type: "text",
+        content: "Клинки Богомола"
+      }
+    },
+    {
+      points: 300,
+      question: {
+        type: "text",
+        content: "Одно заклинание заражает, другое истощает. Вместе они распространяются, как болезнь, передающаяся через прикосновение магии, — и одного врага уже недостаточно. О каком сочетании идёт речь?"
+      },
+      answer: {
+        type: "text",
+        content: "Essence Drain + Contagion"
+      }
+    },
+    {
+      points: 400,
+      question: {
+        type: "text",
+        content: "Среди вещей, способных подавить волю и разрушить боевой дух, есть одна, чьё присутствие внушает не страх, а безысходность. Его аура словно туман, заставляет даже самых храбрых сомневаться в победе и терять желание сражаться."
+      },
+      answer: {
+        type: "text",
+        content: "Дух Уныния (Spirit of Dismay)"
+      }
+    },
+    {
+      points: 500,
+      question: {
+        type: "text",
+        content: "В магическом мире существуют чары, которые позволяют изменить физику пространства без изменения его внешней оболочки. Эти чары не только считаются продвинутой магией, но и строго регулируются Министерством, особенно при применении к портативным объектам."
+      },
+      answer: {
+        type: "text",
+        content: "Заклинание Незримого расширения"
+      }
+    }
+  ]
+},
+    {
+  name: "ЦИТАТЫ ВЕЛИКИХ ЛЮДЕЙ",
+  questions: [
+    {
+      points: 100,
+      question: {
+        type: "text",
+        content: "«Я не стану сидеть сложа руки.»",
+ 
+      },
+      answer: {
+        type: "image",
+        content: "https://i.ibb.co/Kpwt0gjG/ME8-Fl6j3t-jt-Y7jlen-Juhg.png"
+      }
+    },
+    {
+  points: 200,
+  question: {
+    type: "text",
+    content: "«Ты что, хочешь превратить прекрасный акт альтруизма в дурацкий обмен услугами?»"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/4FIjIbVyhJc"
+  }
+},
+    {
+  points: 300,
+  question: {
+    type: "text",
+    content: "«Лишь качество чьих-либо убеждений определяет успех, а не число последователей.»"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/qvCGzL9e82Y"
+  }
+},
+    {
+  points: 400,
+  question: {
+    type: "text",
+    content: "«Не хочу показаться грубым, но я всё это в рот ебал.»"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/xXYQOXwalHM"
+  }
+},
+    {
+  points: 500,
+  question: {
+    type: "text",
+    content: "«Как же там было? «Зажги, туши, насри и смой. И в этом вся наука, Чтоб видеть буквы, Милый мой, сумей говно сменить мочой...» Иди, работай, сука.»"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/cDvuVpN4LxM"
+  }
+}
+  ]
+},
+    {
+      name: "ЗВУКИ ИНЫХ МИРОВ",
+        questions: [
+    {
+  points: 100,
+  question: {
+    type: "audio",
+    content: "https://www.dropbox.com/scl/fi/1r3vkkoydm9xv3wiuxq3p/cyberpunk_2077_05-P.T.-Adamczyk-Outsider-No-More.mp3?rlkey=w80t8846topihlgkidpscpofo&st=w2gc7k7r&raw=1"
+  },
+  answer: {
+    type: "text",
+    content: "cyberpunk 2077 - Outsider No More"
+  }
+},
+    {
+  points: 200,
+  question: {
+    type: "audio",
+    content: "https://www.dropbox.com/scl/fi/1r3vkkoydm9xv3wiuxq3p/cyberpunk_2077_05-P.T.-Adamczyk-Outsider-No-More.mp3?rlkey=w80t8846topihlgkidpscpofo&st=hcoo9lg0&raw=1"
+  },
+  answer: {
+    type: "text",
+    content: "cyberpunk 2077 - Outsider No More"
+  }
+},
+    {
+  points: 300,
+  question: {
+    type: "text",
+    content: "«Лишь качество чьих-либо убеждений определяет успех, а не число последователей.»"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/qvCGzL9e82Y"
+  }
+},
+    {
+  points: 400,
+  question: {
+    type: "audio",
+    content: "https://www.dropbox.com/scl/fi/tf5vjpvxlgkh1hzum6rj9/the_witcher_3_wild_hunt_16-Kaer-Morhen.mp3?rlkey=tkh80cc3h8w3rbak2v9hs619b&st=atb8fvul&raw=1"
+  },
+  answer: {
+    type: "text",
+    content: "the witcher 3 wild hunt - Kaer Morhen"
+  }
+},
+    {
+  points: 500,
+  question: {
+    type: "text",
+    content: "МУЗЫКАЛЬНАЯ ПАУЗА!!! ТЫ ПОЛУЧАЕШЬ БАЛЛЫ ЗА ЭТОТ ВОПРОС АВТОМАТИЧЕСКИ"
+  },
+  answer: {
+    type: "video",
+    content: "https://www.youtube.com/embed/ppSPsvO19dU"
+  }
+}
+  ]
+},
+    {
+      name: "МОНСТРЫ И ТВАРИ",
+      questions: [
+    {
+      points: 100,
+      question: {
+        type: "text",
+        content: "Когда карта превращается в арену, а смерть — в шанс стать сильнее, лишь один титул носят враги, которых остерегаются даже чемпионы Атласа. Кто они?"
+      },
+      answer: {
+        type: "text",
+        content: "Убер-боссы из Path of Exile"
+      }
+    },
+    {
+      points: 200,
+      question: {
+        type: "text",
+        content: "В славянских легендах духи детей, умерших до крещения, известны как Божонтки. В одном фантастическом мире этот образ воплотился в существо, называемое…"
+      },
+      answer: {
+        type: "text",
+        content: "Прибожек"
+      }
+    },
+    {
+      points: 300,
+      question: {
+        type: "text",
+        content: "Маленький и редкий, как удача в битве. Он не сражается, не строит, но способен сделать твой шаг длиннее, руку удачливей, а знание — крепче. Его не заманишь золотом, но он сам приносит плоды тем, кто верит в случай. Что за существо оставляет за собой след из благословений?"
+      },
+      answer: {
+        type: "text",
+        content: "Лепрекон (Heroes III)"
+      }
+    },
+    {
+      points: 400,
+      question: {
+        type: "text",
+        content: "В глубинах сетей обитает безжалостный хищник, не из плоти и крови, способный не просто уничтожить тело, но и похитить твою личность, разум и душу."
+      },
+      answer: {
+        type: "text",
+        content: "Душегуб"
+      }
+    },
+    {
+      points: 500,
+      question: {
+        type: "text",
+        content: "Что было изображено на странице 394?"
+      },
+      answer: {
+        type: "text",
+        content: "Оборотни"
+      }
+    }
+  ]
+},
+  ];
+  
+  const usedKey = "usedQuestions";
+  let used = JSON.parse(localStorage.getItem(usedKey)) || [];
+
+  const splash = document.getElementById('splashScreen');
+  const game = document.getElementById('gameContainer');
+  const board = document.getElementById('gameBoard');
+  const modal = document.getElementById("questionModal");
+  const questionText = document.getElementById("questionText");
+  const answerText = document.getElementById("answerText");
+  const showAnswerBtn = document.getElementById("showAnswerBtn");
+  const backBtn = document.getElementById("backBtn");  
+
+
+  splash.addEventListener('click', () => {
+    used = [];
+    localStorage.removeItem(usedKey);
+    splash.style.display = 'none';
+    game.style.display = 'flex';
+    createBoard();
+  });
+
+let timerInterval = null;
+const timerElement = document.getElementById("timer");
+const TIMER_DURATION = 60; // 60 секунд
+
+function startTimer() {
+  let timeLeft = TIMER_DURATION;
+  updateTimerDisplay(timeLeft);
+
+  if (timerInterval) clearInterval(timerInterval);
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    if (timeLeft > 0) {
+      updateTimerDisplay(timeLeft);
+    } else {
+      clearInterval(timerInterval);
+      timerElement.textContent = "Время вышло!";
+    }
+  }, 1000);
+}
+
+function updateTimerDisplay(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  timerElement.textContent =
+    `${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+}
+   
+    
+  function createBoard() {
+  board.innerHTML = "";
+
+  for (let row = 0; row < categories.length; row++) {
+    for (let col = 0; col < 6; col++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+
+      if (col === 0) {
+        // Категории слева
+        cell.textContent = categories[row]?.name || "";
+        cell.classList.add("category");
+        cell.style.fontSize = "1.8vw";
+      } else {
+        const catIndex = row;
+        const questionIndex = col - 1;
+
+        const q = categories[catIndex]?.questions[questionIndex];
+        if (!q) continue;
+
+        let points;
+        let questionObj = null;
+        if (typeof q === 'object') {
+          points = q.points;
+          questionObj = q;
+        } else {
+          points = q;
+        }
+
+        cell.textContent = points;
+
+        const key = `${catIndex}-${questionIndex}`;
+        if (used.includes(key)) {
+          cell.classList.add('used');
+        }
+
+cell.addEventListener('click', () => {
+if (cell.classList.contains('used')) return;
+
+// 👉 Добавим класс для анимации
+  cell.classList.add("animate");
+
+  // 👉 Удалим класс после завершения анимации (0.4с = как в CSS)
+  setTimeout(() => {
+    cell.classList.remove("animate");
+  }, 400);
+
+if (questionObj) {
+  questionText.innerHTML = questionObj.question.content;
+  const answer = questionObj.answer;
+  let answerHTML = "";
+
+if (questionObj.question.type === "text") {
+  questionText.innerHTML = questionObj.question.content;
+} else if (questionObj.question.image) {
+      // Добавляем картинку как часть ответа, если указана
+      answerHTML += `<img src="${questionObj.question.image}" style="max-width:80vw; max-height:60vh; margin-bottom: 20px;"><br>`
+} else if (questionObj.question.type === "audio") {
+  questionText.innerHTML = `<audio controls src="${questionObj.question.content}" style="width: 80vw;"></audio>`;
+} else {
+  questionText.innerHTML = questionObj.question.content;
+}
+
+    if (answer.type === "text") {
+      answerHTML += `<div>${answer.content}</div>`;
+    } else if (answer.type === "image") {
+      answerHTML = `<img src="${answer.content}" style="max-width:80vw; max-height:60vh; margin-top: 15px;">`;
+    } else if (answer.type === "video") {
+      const videoURL = answer.content.replace("view?usp=drive_link", "preview");
+      answerHTML = `<iframe src="${videoURL}" width="640" height="360" frameborder="0" allow="autoplay; encrypted-media" allowfullscreen></iframe>`;
+    } else if (answer.type === "audio") {
+  
+ 
+        
+        const audio = document.createElement("audio");
+  audio.controls = true;
+  audio.src = answer.content;
+  audio.style.maxWidth = "80vw";
+  answerText.appendChild(audio);
+}
+        
+        else {
+      answerHTML = "Формат ответа не поддерживается.";
+    }
+
+    answerText.innerHTML = answerHTML;
+  } else {
+    questionText.textContent = `Вопрос за ${points} баллов`;
+    answerText.textContent = `Ответ пока отсутствует`;
+  }
+
+  questionText.style.display = "block";
+  showAnswerBtn.style.display = "inline-block";
+      
+      
+  answerText.style.display = "none";
+  backBtn.style.display = "none";
+
+  modal.style.display = "flex";
+  game.style.display = "none";
+      
+  cell.classList.add('used');
+  cell.textContent = "";
+  used.push(key);
+  localStorage.setItem(usedKey, JSON.stringify(used));
+      
+      startTimer();
+});
+
+
+// Кнопка показать ответ
+showAnswerBtn.onclick = () => {
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+  }    
+    
+    
+  // Скрываем вопрос и кнопку "Показать ответ"
+  questionText.style.display = "none";
+  showAnswerBtn.style.display = "none";
+
+  // Показываем ответ и кнопку "Назад к игре"
+  answerText.style.display = "block";
+  backBtn.style.display = "inline-block";
+};
+
+// Кнопка назад к игре
+backBtn.onclick = () => {
+  modal.style.display = "none";
+  game.style.display = "flex";  
+};
+      }
+
+      board.appendChild(cell);
+    }
+  }
+}
+</script>
+
+</body>
+</html>
