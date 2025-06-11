@@ -501,7 +501,7 @@
 
 let timerInterval = null;
 const timerElement = document.getElementById("timer");
-const TIMER_DURATION = 60; // 60 секунд
+const TIMER_DURATION = 65; // 60 секунд
 
 function startTimer() {
   let timeLeft = TIMER_DURATION;
@@ -540,7 +540,7 @@ function updateTimerDisplay(seconds) {
         // Категории слева
         cell.textContent = categories[row]?.name || "";
         cell.classList.add("category");
-        cell.style.fontSize = "1.8vw";
+        cell.style.fontSize = "2vw";
       } else {
         const catIndex = row;
         const questionIndex = col - 1;
